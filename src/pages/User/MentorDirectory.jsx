@@ -24,19 +24,65 @@ const MentorDirectory = () => {
 
   const fetchMentors = async () => {
     setLoading(true);
-    // Lấy danh sách Mentor đã được duyệt
-    const { data, error } = await supabase
-      .from('mentors')
-      .select('id, mentor_id, full_name, expertise, avatar_url, bio, phone, email, linkedin_url')
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false });
+    try {
+      // 1. Lấy danh sách Mentor từ bảng mentors (không giới hạn status hoặc lọc status != 'rejected')
+      const { data: mentorsData, error: mentorsError } = await supabase
+        .from('mentors')
+        .select('id, mentor_id, full_name, expertise, avatar_url, bio, phone, email, linkedin_url, status')
+        .neq('status', 'rejected')
+        .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setMentors(data);
-    } else {
-      console.error('Error fetching mentors:', error);
+      // 2. Lấy danh sách người dùng có role = 'mentor' từ bảng profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, avatar_url, role, status')
+        .ilike('role', 'mentor');
+
+      const mentorMap = new Map();
+
+      // Thêm dữ liệu từ bảng mentors trước
+      if (mentorsData) {
+        mentorsData.forEach(m => {
+          const key = m.mentor_id || m.id;
+          mentorMap.set(key, {
+            id: m.id,
+            mentor_id: key,
+            full_name: m.full_name || 'Mentor Chuyên gia',
+            expertise: m.expertise || 'Chuyên gia Phỏng vấn / Career Mentor',
+            avatar_url: m.avatar_url || null,
+            bio: m.bio || 'Chuyên gia tư vấn định hướng nghề nghiệp và hỗ trợ luyện tập phỏng vấn.',
+            phone: m.phone || '',
+            email: m.email || '',
+            linkedin_url: m.linkedin_url || ''
+          });
+        });
+      }
+
+      // Thêm các user có role = 'mentor' từ bảng profiles nếu chưa có trong mentorMap
+      if (profilesData) {
+        profilesData.forEach(p => {
+          if (!mentorMap.has(p.id)) {
+            mentorMap.set(p.id, {
+              id: p.id,
+              mentor_id: p.id,
+              full_name: p.full_name || p.email?.split('@')[0] || 'Mentor Chuyên gia',
+              expertise: 'Chuyên gia Phỏng vấn / Career Mentor',
+              avatar_url: p.avatar_url || null,
+              bio: 'Chuyên gia tư vấn định hướng nghề nghiệp và hỗ trợ mock interview.',
+              phone: p.phone || '',
+              email: p.email || '',
+              linkedin_url: ''
+            });
+          }
+        });
+      }
+
+      setMentors(Array.from(mentorMap.values()));
+    } catch (err) {
+      console.error('Lỗi khi tải danh sách Mentor:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const filteredMentors = mentors.filter(mentor => 

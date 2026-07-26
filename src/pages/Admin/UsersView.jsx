@@ -155,7 +155,22 @@ const UsersView = () => {
         let notifType = 'info';
 
         if (newRole === 'mentor') {
-          await supabase.from('mentors').update({ status: 'approved' }).eq('mentor_id', currentUser.id);
+          const { data: existingMentor } = await supabase.from('mentors').select('id').eq('mentor_id', currentUser.id).maybeSingle();
+          if (existingMentor) {
+            await supabase.from('mentors').update({ status: 'approved' }).eq('mentor_id', currentUser.id);
+          } else {
+            await supabase.from('mentors').insert({
+              mentor_id: currentUser.id,
+              full_name: currentUser.full_name,
+              email: currentUser.email,
+              phone: currentUser.phone || null,
+              expertise: 'Chuyên gia Phỏng vấn / Career Mentor',
+              bio: 'Chuyên gia tư vấn định hướng nghề nghiệp và hỗ trợ phỏng vấn thử.',
+              status: 'approved',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+          }
           notifTitle = 'Hồ sơ Mentor đã được duyệt!';
           notifContent = 'Admin đã nâng cấp tài khoản của bạn lên Mentor. Bây giờ bạn có thể truy cập trang quản lý Mentor.';
           notifType = 'success';

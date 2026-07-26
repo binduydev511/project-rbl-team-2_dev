@@ -89,13 +89,34 @@ const BookMentor = () => {
     setLoading(true);
     try {
       // 1. Fetch Mentor Details
-      const { data: mentorData } = await supabase
+      let mentorData = null;
+      const { data: mData } = await supabase
         .from('mentors')
         .select('id, mentor_id, full_name, email, expertise, avatar_url')
-        .eq('status', 'approved')
-        // Lấy bằng id (PK) hoặc mentor_id (auth ID) tùy cấu trúc bảng
         .or(`id.eq.${id},mentor_id.eq.${id}`)
-        .single();
+        .maybeSingle();
+
+      if (mData) {
+        mentorData = mData;
+      } else {
+        // Fallback: Lấy từ bảng profiles nếu chưa có dòng dữ liệu trong mentors
+        const { data: pData } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, phone, avatar_url')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (pData) {
+          mentorData = {
+            id: pData.id,
+            mentor_id: pData.id,
+            full_name: pData.full_name || pData.email?.split('@')[0] || 'Mentor Chuyên gia',
+            email: pData.email,
+            expertise: 'Chuyên gia Phỏng vấn / Career Mentor',
+            avatar_url: pData.avatar_url
+          };
+        }
+      }
 
       if (mentorData) {
         setMentor(mentorData);
