@@ -88,31 +88,25 @@ const MentorBlogManagement = () => {
   };
 
   return (
-    <div className="section" style={{ background: 'var(--color-cream)', minHeight: 'calc(100vh - 80px)' }}>
-      <div className="container">
-        {/* Back to Dashboard */}
-        <Link to="/mentor" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.9rem', textDecoration: 'none', marginBottom: '1.5rem', transition: 'color 0.3s', fontFamily: 'var(--font-sans)' }} onMouseOver={e => e.currentTarget.style.color = 'var(--color-charcoal)'} onMouseOut={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}>
-          ← Quay lại Mentor Dashboard
-        </Link>
-
-        {/* Header */}
-        <div className="reveal is-visible" style={{
-          marginBottom: 'var(--spacing-xl)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
+    <div className="container animate-fade" style={{ paddingTop: '8rem', paddingBottom: 'var(--spacing-xl)', minHeight: '100vh' }}>
+      <header style={{ marginBottom: 'var(--spacing-lg)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <span className="label">Mentor Portal</span>
-            <h1 style={{ marginTop: 'var(--spacing-sm)' }}>Quản lý Blog</h1>
-            <p style={{ marginTop: '0.5rem' }}>Tạo và chia sẻ bài viết, kinh nghiệm phỏng vấn cho ứng viên.</p>
+            <Link to="/mentor" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem', textDecoration: 'none', marginBottom: '1rem' }}>
+              ← Quay lại Mentor Dashboard
+            </Link>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: 'var(--spacing-xs)', textTransform: 'uppercase' }}>
+              Quản lý Blog
+            </h1>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Tạo và chia sẻ bài viết, kinh nghiệm phỏng vấn cho ứng viên.
+            </p>
           </div>
-          <Link to="/mentor/blogs/new" className="btn btn--primary btn--pill" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Link to="/mentor/blogs/new" style={{ background: '#EA580C', color: '#fff', border: 'none', padding: '0.8rem 1.8rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.3s ease' }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(234, 88, 12, 0.4)'; }} onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(234, 88, 12, 0.3)'; }}>
             <Plus size={18} /> Tạo bài viết mới
           </Link>
         </div>
+      </header>
 
         {/* Blog Grid */}
         {loading ? (
@@ -128,7 +122,7 @@ const MentorBlogManagement = () => {
               const hasVideo = !!rawVideoUrl;
 
               return (
-                <div key={blog.id} className={`glass-card reveal is-visible ${idx > 0 ? `reveal--delay-${Math.min(idx, 3)}` : ''}`} style={{ display: 'flex', flexDirection: 'column' }}>
+                <div key={blog.id} className={`solid-card reveal is-visible ${idx > 0 ? `reveal--delay-${Math.min(idx, 3)}` : ''}`} style={{ display: 'flex', flexDirection: 'column', background: '#fff', padding: '1.5rem', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                   {/* Video Embed */}
                   {embedUrl && (
                     <div style={{ marginBottom: '1rem' }}>
@@ -301,20 +295,19 @@ const MentorBlogManagement = () => {
             })}
 
             {blogs.length === 0 && (
-              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem 2rem', color: 'var(--color-text-secondary)' }}>
+              <div className="solid-card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem 2rem', color: 'var(--color-text-secondary)', background: '#fff', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <FileText size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
                 <p style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Bạn chưa có bài viết nào.</p>
                 <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
                   Hãy tạo bài viết đầu tiên để chia sẻ kinh nghiệm phỏng vấn và kiến thức chuyên môn với ứng viên.
                 </p>
-                <Link to="/mentor/blogs/new" className="btn btn--primary btn--pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Link to="/mentor/blogs/new" style={{ background: '#EA580C', color: '#fff', border: 'none', padding: '0.8rem 1.8rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(234, 88, 12, 0.3)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', transition: 'all 0.3s ease' }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(234, 88, 12, 0.4)'; }} onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(234, 88, 12, 0.3)'; }}>
                   <Plus size={18} /> Tạo bài viết đầu tiên
                 </Link>
               </div>
             )}
           </div>
         )}
-      </div>
     </div>
   );
 };

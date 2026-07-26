@@ -129,19 +129,22 @@ const MentorSchedule = () => {
   };
 
   return (
-    <div className="section" style={{ background: 'var(--color-cream)', minHeight: 'calc(100vh - 80px)' }}>
-      <div className="container">
-        {/* Back to Dashboard */}
-        <Link to="/mentor" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-secondary)', fontSize: '0.9rem', textDecoration: 'none', marginBottom: '1.5rem', transition: 'color 0.3s', fontFamily: 'var(--font-sans)' }} onMouseOver={e => e.currentTarget.style.color = 'var(--color-charcoal)'} onMouseOut={e => e.currentTarget.style.color = 'var(--color-text-secondary)'}>
-          ← Quay lại Mentor Dashboard
-        </Link>
-
-        {/* Header */}
-        <div className="reveal is-visible" style={{ marginBottom: 'var(--spacing-xl)' }}>
-          <span className="label">Mentor Portal</span>
-          <h1 style={{ marginTop: 'var(--spacing-sm)' }}>Quản lý Lịch hẹn</h1>
-          <p style={{ marginTop: '0.5rem' }}>Xem và quản lý các yêu cầu đặt lịch mentoring 1-on-1 từ ứng viên.</p>
+    <div className="container animate-fade" style={{ paddingTop: '8rem', paddingBottom: 'var(--spacing-xl)', minHeight: '100vh' }}>
+      <header style={{ marginBottom: 'var(--spacing-lg)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <Link to="/mentor" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)', fontSize: '0.9rem', textDecoration: 'none', marginBottom: '1rem' }}>
+              ← Quay lại Mentor Dashboard
+            </Link>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: 'var(--spacing-xs)', textTransform: 'uppercase' }}>
+              Quản lý Lịch hẹn
+            </h1>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              Xem và quản lý các yêu cầu đặt lịch mentoring 1-on-1 từ ứng viên.
+            </p>
+          </div>
         </div>
+      </header>
 
         {/* Filter Tabs */}
         <div className="reveal is-visible" style={{
@@ -189,16 +192,17 @@ const MentorSchedule = () => {
               return (
                 <div
                   key={booking.id}
-                  className={`glass-card reveal is-visible ${idx > 0 ? `reveal--delay-${Math.min(idx, 3)}` : ''}`}
-                  style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}
+                  className={`solid-card reveal is-visible ${idx > 0 ? `reveal--delay-${Math.min(idx, 3)}` : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', background: '#fff', padding: '2rem', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}
                 >
                   {/* Avatar */}
                   <div style={{
                     width: '50px', height: '50px', borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--color-accent), var(--color-earth))',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'white', fontWeight: 700, fontSize: '1.1rem',
                     flexShrink: 0,
+                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)'
                   }}>
                     {booking.candidateName.charAt(0)}
                   </div>
@@ -226,16 +230,16 @@ const MentorSchedule = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <div><strong>Email:</strong> <a href={`mailto:${booking.candidateEmail}`} style={{ color: 'var(--color-primary)' }}>{booking.candidateEmail || 'N/A'}</a></div>
                           <div><strong>SĐT (Zalo):</strong> {booking.candidatePhone ? <a href={`https://zalo.me/${booking.candidatePhone.replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)' }}>{booking.candidatePhone}</a> : 'N/A'}</div>
-                          {booking.candidateCvUrl && (
-                            <div style={{ marginTop: '0.25rem', display: 'flex', gap: '0.5rem' }}>
-                              <a href={booking.candidateCvUrl} target="_blank" rel="noopener noreferrer" className="btn btn--outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', display: 'inline-block' }}>
+                          <div style={{ marginTop: '0.25rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            {booking.candidateCvUrl && (
+                              <a href={booking.candidateCvUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.2)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)'}>
                                 Xem CV Ứng viên
                               </a>
-                              <Link to={`/mentor/reviews`} className="btn btn--outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', display: 'inline-block' }}>
-                                Xem Video Phỏng vấn AI
-                              </Link>
-                            </div>
-                          )}
+                            )}
+                            <Link to={`/mentor/candidate-history/${booking.candidate_id}`} style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}>
+                              Xem Lịch sử Phỏng vấn AI
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -257,15 +261,17 @@ const MentorSchedule = () => {
                       <>
                         <button
                           onClick={() => handleAccept(booking.id)}
-                          className="btn btn--primary"
-                          style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', borderRadius: '50px' }}
+                          style={{ background: '#10b981', color: '#fff', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', transition: 'all 0.3s ease' }}
+                          onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.35)'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.25)'; }}
                         >
                           Chấp nhận
                         </button>
                         <button
                           onClick={() => handleReject(booking.id)}
-                          className="btn btn--outline"
-                          style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', borderRadius: '50px' }}
+                          style={{ background: '#fff', color: '#ef4444', border: '1px solid #fca5a5', padding: '0.5rem 1.2rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s ease' }}
+                          onMouseOver={(e) => { e.currentTarget.style.background = '#fef2f2'; }}
+                          onMouseOut={(e) => { e.currentTarget.style.background = '#fff'; }}
                         >
                           Từ chối
                         </button>
@@ -274,11 +280,9 @@ const MentorSchedule = () => {
                     {booking.status === 'accepted' && (
                       <Link
                         to={`/mentor/schedule/session/${booking.id}`}
-                        className="btn btn--primary"
-                        style={{
-                          padding: '0.45rem 1rem', fontSize: '0.8rem', borderRadius: '50px',
-                          display: 'flex', alignItems: 'center', gap: '0.35rem',
-                        }}
+                        style={{ background: '#10b981', color: '#fff', border: 'none', padding: '0.5rem 1.2rem', borderRadius: '99px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'all 0.3s ease' }}
+                        onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.35)'; }}
+                        onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.25)'; }}
                       >
                         <Video size={14} /> Tham gia phiên
                       </Link>
@@ -295,7 +299,7 @@ const MentorSchedule = () => {
             )}
 
             {!errorMsg && filteredBookings.length === 0 && (
-              <div className="glass-card" style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--color-text-secondary)' }}>
+              <div className="solid-card" style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--color-text-secondary)', background: '#fff', borderRadius: '24px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <Calendar size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
                 <p style={{ fontSize: '1.05rem', marginBottom: '0.5rem' }}>
                   Không có lịch hẹn nào{filter !== 'all' ? ' trong mục này' : ''}.
@@ -307,7 +311,6 @@ const MentorSchedule = () => {
             )}
           </div>
         )}
-      </div>
     </div>
   );
 };

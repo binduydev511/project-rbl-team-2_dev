@@ -44,6 +44,7 @@ import MentorSchedule from '../pages/Mentor/MentorSchedule';
 import MentorSession from '../pages/Mentor/MentorSession';
 import MentorRegistration from '../pages/Mentor/MentorRegistration';
 import MentorProfile from '../pages/Mentor/MentorProfile';
+import MentorCandidateHistory from '../pages/Mentor/MentorCandidateHistory';
 
 // Public Views
 import CompanyView from '../pages/Public/CompanyView';
@@ -148,6 +149,7 @@ const AppRoutes = () => {
       <Route path="/mentor/reviews/:id" element={<MentorRoute><MentorReviewDetail /></MentorRoute>} />
       <Route path="/mentor/schedule" element={<MentorRoute><MentorSchedule /></MentorRoute>} />
       <Route path="/mentor/schedule/session/:id" element={<MentorRoute><MentorSession /></MentorRoute>} />
+      <Route path="/mentor/candidate-history/:id" element={<MentorRoute><MentorCandidateHistory /></MentorRoute>} />
     </Routes>
     </div>
   );

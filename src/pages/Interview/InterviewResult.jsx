@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import {
   ArrowLeft, Download, RotateCcw, Share2, Star,
   TrendingUp, TrendingDown, ChevronDown, ChevronUp,
   Sparkles, BookOpen, Target, Award, Mic, Brain,
   MessageSquare, Shield, Zap, ExternalLink, Clock,
-  CheckCircle2, AlertCircle, Info, Loader2, AlertTriangle
+  CheckCircle2, AlertCircle, Info, Loader2, AlertTriangle, Send
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { MOCK_RESULT, getScoreColor, getScoreLabel } from '../../constants/interviewConstants';
 import { evaluateInterviewAnswers } from '../../utils/interviewAiService';
 import { supabase } from '../../utils/supabaseClient';
+import { useAuth } from '../../utils/AuthContext';
 import { resolveResourceUrl } from '../../utils/speechUtils';
 import '../../assets/styles/interview-theme.css';
 import './InterviewResult.css';
@@ -155,6 +157,8 @@ export default function InterviewResult() {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
+  const { profile } = useAuth();
+  const isMentor = profile?.role === 'mentor' || profile?.role === 'admin';
   const { config, totalQuestions, answeredQuestions, questionAnswerPairs, autoPrint } = location.state || {};
 
   const [resultData, setResultData] = useState(null);
@@ -162,6 +166,12 @@ export default function InterviewResult() {
   const [evalError, setEvalError] = useState(null);
   const [expandedQuestion, setExpandedQuestion] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  
+  // Mentor Feedback states
+  const [mentorReview, setMentorReview] = useState(null);
+  const [feedbackInput, setFeedbackInput] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
   const evalAttemptedRef = useRef(false);
 
   const toggleQuestion = (id) => {
@@ -246,6 +256,52 @@ export default function InterviewResult() {
       }
     } catch (dbErr) {
       console.warn('[InterviewResult] Supabase DB write failed:', dbErr.message);
+    }
+  };
+
+  const handleSubmitMentorReview = async () => {
+    if (!feedbackInput.trim()) return;
+    setIsSubmittingReview(true);
+    try {
+      // Create review record
+      const { data: newReview, error } = await supabase
+        .from('mentor_reviews')
+        .insert({
+          mentor_id: profile.id,
+          interview_id: id,
+          candidate_id: resultData?.userId || null,
+          overall_comment: feedbackInput,
+          created_at: new Date().toISOString()
+        })
+        .select('*, mentor:profiles!mentor_id(full_name)')
+        .single();
+        
+      if (error) {
+        if (error.code === '42P01') {
+          toast.error('Bảng mentor_reviews chưa được tạo đầy đủ các cột.');
+        } else {
+          throw error;
+        }
+      } else {
+        setMentorReview(newReview);
+        
+        // Send notification to candidate
+        if (resultData?.userId) {
+          await supabase.from('notifications').insert([{
+            user_id: resultData.userId,
+            title: 'Mentor đã gửi đánh giá mới',
+            content: `Mentor ${profile?.full_name || 'của bạn'} đã nhận xét bài phỏng vấn của bạn. Nhấn vào đây để xem chi tiết!`,
+            type: 'info',
+            action_link: `/interview/result/${id}`
+          }]);
+        }
+        toast.success('Đã gửi đánh giá thành công!');
+      }
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      toast.error('Có lỗi xảy ra: ' + err.message);
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -381,6 +437,18 @@ export default function InterviewResult() {
 
           if (ansErr) throw ansErr;
 
+          // Fetch mentor review if exists
+          try {
+            const { data: mentorRev } = await supabase
+              .from('mentor_reviews')
+              .select('*, mentor:profiles!mentor_id(full_name)')
+              .eq('interview_id', id)
+              .maybeSingle();
+            if (mentorRev) setMentorReview(mentorRev);
+          } catch (e) {
+            console.warn('Could not fetch mentor review', e);
+          }
+
           // Reconstruct the resultData
           let grade = 'C+';
           const score = interview.overall_score || 0;
@@ -435,6 +503,7 @@ export default function InterviewResult() {
 
           const mappedResult = {
             id: interview.id,
+            userId: interview.user_id,
             overallScore: score,
             grade: grade,
             aiFeedback: cleanFeedback || (isSilent ? 'Ứng viên không cung cấp đủ thông tin để AI có thể đưa ra đánh giá chuyên sâu.' : 'Cần cố gắng nhiều hơn.'),
@@ -480,17 +549,7 @@ export default function InterviewResult() {
     }
   }, [questionAnswerPairs, config, totalQuestions, answeredQuestions, id]);
 
-  // Handle auto-print if navigated from history
-  useEffect(() => {
-    if (resultData && autoPrint && !isEvaluating) {
-      const timer = setTimeout(() => {
-        handleDownloadPDF();
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [resultData, autoPrint, isEvaluating]);
-
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = useCallback(() => {
     if (isDownloading) return;
     setIsDownloading(true);
     
@@ -554,7 +613,17 @@ export default function InterviewResult() {
         setIsDownloading(false);
       });
     }, 800);
-  };
+  }, [isDownloading, expandedQuestion, id]);
+
+  // Handle auto-print if navigated from history
+  useEffect(() => {
+    if (resultData && autoPrint && !isEvaluating) {
+      const timer = setTimeout(() => {
+        handleDownloadPDF();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [resultData, autoPrint, isEvaluating, handleDownloadPDF]);
 
   if (isEvaluating) {
     return (
@@ -606,9 +675,9 @@ export default function InterviewResult() {
       <div className="result-container">
         {/* ── Header ── */}
         <div className="result-header iv-animate-fade">
-          <button className="iv-btn iv-btn--ghost" onClick={() => navigate('/interview/history')}>
+          <button className="iv-btn iv-btn--ghost" onClick={() => navigate(-1)}>
             <ArrowLeft size={18} />
-            Lịch sử phỏng vấn
+            Quay lại
           </button>
           <div className="result-header__actions">
             <button className="iv-btn iv-btn--secondary iv-btn--sm" onClick={handleDownloadPDF} disabled={isDownloading}>
@@ -616,10 +685,12 @@ export default function InterviewResult() {
               {isDownloading ? 'Đang tạo PDF...' : 'Tải PDF'}
             </button>
 
-            <button className="iv-btn result-btn-orange iv-btn--sm" onClick={() => navigate('/interview/setup')}>
-              <RotateCcw size={14} />
-              Thử lại
-            </button>
+            {!isMentor && (
+              <button className="iv-btn result-btn-orange iv-btn--sm" onClick={() => navigate('/interview/setup')}>
+                <RotateCcw size={14} />
+                Thử lại
+              </button>
+            )}
           </div>
         </div>
 
@@ -736,6 +807,48 @@ export default function InterviewResult() {
             <p className="result-card__text">{result.aiFeedback}</p>
           </div>
         </div>
+
+        {/* ── Mentor Feedback ── */}
+        {(mentorReview || isMentor) && (
+          <div className="result-section iv-animate-slide-up iv-delay-1" style={{ marginTop: '1.5rem' }}>
+            <div className="result-card" style={{ borderLeft: '4px solid #10b981', background: 'rgba(16, 185, 129, 0.03)' }}>
+              <div className="result-card__header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Shield size={18} color="#10b981" />
+                <h2 style={{ color: '#10b981', margin: 0 }}>Nhận xét từ Mentor</h2>
+              </div>
+              
+              {mentorReview ? (
+                <div style={{ marginTop: '1rem' }}>
+                  <p className="result-card__text" style={{ whiteSpace: 'pre-line', color: 'var(--iv-text-primary)' }}>{mentorReview.overall_comment}</p>
+                  <div style={{ marginTop: '1rem', fontSize: '0.85rem', color: 'var(--iv-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#10b981', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                      {mentorReview.mentor?.full_name?.charAt(0) || 'M'}
+                    </div>
+                    Đánh giá bởi: <strong>{mentorReview.mentor?.full_name || 'Mentor'}</strong>
+                  </div>
+                </div>
+              ) : isMentor ? (
+                <div style={{ marginTop: '1rem' }}>
+                  <textarea
+                    value={feedbackInput}
+                    onChange={(e) => setFeedbackInput(e.target.value)}
+                    style={{ width: '100%', minHeight: '100px', padding: '1rem', borderRadius: '8px', border: '1px solid var(--iv-border)', background: 'var(--iv-bg)', color: 'var(--iv-text-primary)', resize: 'vertical', marginBottom: '1rem', fontFamily: 'inherit' }}
+                    placeholder="Nhập đánh giá, nhận xét chi tiết và lời khuyên cho ứng viên tại đây..."
+                  />
+                  <button 
+                    className="iv-btn iv-btn--sm" 
+                    style={{ background: '#10b981', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', opacity: (!feedbackInput.trim() || isSubmittingReview) ? 0.5 : 1, cursor: (!feedbackInput.trim() || isSubmittingReview) ? 'not-allowed' : 'pointer' }}
+                    onClick={handleSubmitMentorReview}
+                    disabled={isSubmittingReview || !feedbackInput.trim()}
+                  >
+                    {isSubmittingReview ? <Loader2 size={16} className="spin" /> : <Send size={16} />}
+                    {isSubmittingReview ? 'Đang gửi...' : 'Gửi nhận xét'}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
 
         {/* ── Skills Grid ── */}
         <div className="result-skills-grid iv-animate-slide-up iv-delay-2">
@@ -991,14 +1104,16 @@ export default function InterviewResult() {
 
         {/* ── Bottom Actions ── */}
         <div className="result-bottom iv-animate-fade iv-delay-8">
-          <button className="iv-btn iv-btn--secondary" onClick={() => navigate('/interview/history')}>
+          <button className="iv-btn iv-btn--secondary" onClick={() => navigate(-1)}>
             <ArrowLeft size={16} />
-            Lịch sử phỏng vấn
+            Quay lại
           </button>
-          <button className="iv-btn result-btn-orange iv-btn--lg" onClick={() => navigate('/interview/setup')}>
-            <RotateCcw size={16} />
-            Phỏng vấn lại
-          </button>
+          {!isMentor && (
+            <button className="iv-btn result-btn-orange iv-btn--lg" onClick={() => navigate('/interview/setup')}>
+              <RotateCcw size={16} />
+              Phỏng vấn lại
+            </button>
+          )}
         </div>
       </div>
     </div>
