@@ -1,9 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { X, CheckCircle, Loader, ShieldCheck } from 'lucide-react';
+import { X, CheckCircle, Loader, ShieldCheck, Clock, AlertTriangle } from 'lucide-react';
 
 const PaymentModal = ({ planName, price, orderCode, bankAccount, bankId, accountName, onClose, onSuccess }) => {
-  const [status, setStatus] = useState('pending'); // pending, success, failed
+  const [status, setStatus] = useState('pending'); // pending, success, failed, expired
+  const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes
+
+  useEffect(() => {
+    if (status !== 'pending') return;
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          handleExpire();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [status]);
+
+  const handleExpire = async () => {
+    setStatus('expired');
+    try {
+      await supabase.from('orders').update({ status: 'cancelled' }).eq('order_code', orderCode);
+    } catch (err) {
+      console.error('Error cancelling order', err);
+    }
+  };
 
   useEffect(() => {
     // Đăng ký lắng nghe Realtime từ bảng orders
@@ -35,6 +62,12 @@ const PaymentModal = ({ planName, price, orderCode, bankAccount, bankId, account
 
   const qrUrl = `https://img.vietqr.io/image/${bankId}-${bankAccount}-compact2.png?amount=${price}&addInfo=${orderCode}&accountName=${encodeURIComponent(accountName)}`;
 
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div style={modalOverlayStyle}>
       <div className="animate-fade" style={modalContentStyle}>
@@ -43,8 +76,13 @@ const PaymentModal = ({ planName, price, orderCode, bankAccount, bankId, account
         {status === 'pending' ? (
           <div>
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4f46e5', padding: '0.5rem 1rem', borderRadius: '9999px', marginBottom: '1rem', fontWeight: 'bold', fontSize: '0.85rem', gap: '0.5rem' }}>
-                <ShieldCheck size={16} /> Thanh toán An toàn
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#e0e7ff', color: '#4f46e5', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.85rem', gap: '0.5rem' }}>
+                  <ShieldCheck size={16} /> Thanh toán An toàn
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#fee2e2', color: '#ef4444', padding: '0.5rem 1rem', borderRadius: '9999px', fontWeight: 'bold', fontSize: '0.85rem', gap: '0.5rem' }}>
+                  <Clock size={16} /> Hết hạn sau {formatTime(timeLeft)}
+                </div>
               </div>
               <h2 style={{ margin: '0 0 0.5rem 0', color: '#1e293b', fontSize: '1.75rem', fontWeight: '800' }}>Nâng cấp {planName}</h2>
               <p style={{ color: '#64748b', margin: 0, fontSize: '0.95rem' }}>Quét mã QR bằng ứng dụng ngân hàng của bạn</p>
@@ -67,6 +105,17 @@ const PaymentModal = ({ planName, price, orderCode, bankAccount, bankId, account
               <Loader size={18} className="animate-spin" color="#4f46e5" />
               <span style={{ fontWeight: '500' }}>Hệ thống đang chờ nhận thanh toán...</span>
             </div>
+          </div>
+        ) : status === 'expired' ? (
+          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+            <div style={{ display: 'inline-flex', background: '#fef2f2', padding: '1.5rem', borderRadius: '50%', marginBottom: '1.5rem' }}>
+              <AlertTriangle size={64} color="#ef4444" />
+            </div>
+            <h2 style={{ color: '#ef4444', marginBottom: '0.5rem', fontSize: '1.75rem', fontWeight: '800' }}>Mã Thanh toán Hết hạn</h2>
+            <p style={{ color: '#64748b', fontSize: '1rem', lineHeight: '1.5', marginBottom: '2rem' }}>
+              Phiên giao dịch này đã quá 15 phút và đã bị hủy.<br/>Vui lòng đóng hộp thoại và thử tạo lại một giao dịch mới.
+            </p>
+            <button onClick={onClose} style={{ background: '#f1f5f9', color: '#475569', padding: '0.75rem 2rem', borderRadius: '50px', border: 'none', fontWeight: '600', fontSize: '1rem', cursor: 'pointer' }}>Đóng lại</button>
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
