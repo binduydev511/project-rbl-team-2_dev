@@ -2,21 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
-import { 
-  User, 
-  ShieldCheck, 
-  FileText, 
-  Upload, 
-  Link as LinkIcon, 
-  Phone, 
-  Mail, 
-  Award, 
-  BookOpen, 
-  Clock, 
-  Save, 
-  Lock, 
-  Eye, 
-  EyeOff, 
+import {
+  User,
+  ShieldCheck,
+  FileText,
+  Upload,
+  Link as LinkIcon,
+  Phone,
+  Mail,
+  Award,
+  BookOpen,
+  Clock,
+  Save,
+  Lock,
+  Eye,
+  EyeOff,
   ArrowLeft,
   CheckCircle2,
   ExternalLink,
@@ -38,11 +38,11 @@ const MentorProfile = () => {
   const [bio, setBio] = useState('');
   const [expertise, setExpertise] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
-  
+
   // Document State
   const [documentUrl, setDocumentUrl] = useState(null);
   const [newFile, setNewFile] = useState(null);
-  
+
   // Security States
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -101,7 +101,7 @@ const MentorProfile = () => {
         setLinkedinUrl(data.linkedin_url || '');
         setBio(data.bio || '');
         setDocumentUrl(data.document_url || null);
-        
+
         const parsed = parseExpertise(data.expertise);
         setExpertise(parsed.expertise);
         setYearsOfExperience(parsed.yearsOfExperience);
@@ -137,42 +137,78 @@ const MentorProfile = () => {
     try {
       const combinedExpertise = `${expertise} (${yearsOfExperience} năm kinh nghiệm)`;
 
-      const { error: mentorError } = await supabase
+      // 1. Kiểm tra xem người dùng đã có bản ghi trong bảng 'mentors' chưa
+      const { data: existingMentor } = await supabase
         .from('mentors')
-        .update({
-          full_name: fullName,
-          phone: phone,
-          expertise: combinedExpertise,
-          linkedin_url: linkedinUrl,
-          bio: bio,
-          updated_at: new Date().toISOString()
-        })
-        .eq('mentor_id', user.id);
+        .select('id')
+        .or(`mentor_id.eq.${user.id},id.eq.${user.id}`)
+        .maybeSingle();
 
-      if (mentorError) throw mentorError;
+      if (existingMentor) {
+        // Cập nhật bản ghi mentor hiện có
+        const { error: mentorError } = await supabase
+          .from('mentors')
+          .update({
+            full_name: fullName,
+            phone: phone,
+            expertise: combinedExpertise,
+            linkedin_url: linkedinUrl,
+            bio: bio,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingMentor.id);
 
+        if (mentorError) throw mentorError;
+      } else {
+        // Tạo mới bản ghi mentor với trạng thái approved nếu chưa tồn tại
+        const { error: insertError } = await supabase
+          .from('mentors')
+          .insert({
+            mentor_id: user.id,
+            full_name: fullName,
+            email: user.email,
+            phone: phone,
+            expertise: combinedExpertise,
+            linkedin_url: linkedinUrl,
+            bio: bio,
+            avatar_url: user.user_metadata?.avatar_url || null,
+            status: 'approved',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // 2. Cập nhật thông tin tương ứng trong bảng profiles
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           full_name: fullName,
+          phone: phone,
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.warn('Cảnh báo cập nhật profiles:', profileError.message);
+      }
 
+      // 3. Cập nhật Auth User Metadata
       const { error: authError } = await updateProfile({
         full_name: fullName,
         phone: phone
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.warn('Cảnh báo cập nhật auth metadata:', authError.message);
+      }
 
       setProfileMessage({ type: 'success', text: 'Cập nhật thông tin Mentor thành công!' });
       fetchMentorData();
     } catch (err) {
-      console.error(err);
-      setProfileMessage({ type: 'error', text: err.message || 'Lỗi khi cập nhật thông tin.' });
+      console.error('Lỗi khi cập nhật thông tin Mentor:', err);
+      setProfileMessage({ type: 'error', text: err.message || 'Có lỗi xảy ra khi lưu thông tin.' });
     } finally {
       setLoading(false);
     }
@@ -426,10 +462,10 @@ const MentorProfile = () => {
             className="auth-input-no-border"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            style={{ 
-              minHeight: '120px', 
-              resize: 'vertical', 
-              lineHeight: '1.6', 
+            style={{
+              minHeight: '120px',
+              resize: 'vertical',
+              lineHeight: '1.6',
               padding: '0.75rem',
               background: '#f8fafc',
               border: '1px solid #e2e8f0',
@@ -506,9 +542,9 @@ const MentorProfile = () => {
 
         <form onSubmit={handleUploadCertificate} style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
           <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.75rem' }}>Tải lên tài liệu mới</h4>
-          
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div 
+            <div
               style={{
                 position: 'relative',
                 border: '2px dashed #cbd5e1',
@@ -651,7 +687,7 @@ const MentorProfile = () => {
   return (
     <div className="profile-page-wrapper animate-fade">
       <div className="profile-main-container">
-        
+
         {/* User Hero Banner Header */}
         <div className="profile-hero-card">
           <div className="profile-hero-content">
@@ -716,7 +752,7 @@ const MentorProfile = () => {
                 <ShieldCheck size={18} />
                 <span>Bảo mật tài khoản</span>
               </button>
-              
+
               <button
                 className="profile-nav-item"
                 onClick={() => navigate('/mentor')}
