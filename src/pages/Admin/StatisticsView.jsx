@@ -119,7 +119,7 @@ const StatisticsView = () => {
             const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
             return (
-              <div key={index} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.8rem' }}>
+              <div key={index} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '0.8rem', height: '100%' }}>
                 <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>{count}</div>
                 <motion.div 
                   initial={{ height: 0 }}
