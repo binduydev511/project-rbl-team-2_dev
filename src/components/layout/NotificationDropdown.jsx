@@ -82,9 +82,18 @@ const NotificationDropdown = ({ user }) => {
       await supabase.from('notifications').update({ is_read: true }).eq('id', notification.id);
     }
 
-    if (notification.action_link) {
+    // Xác định link chuyển hướng: ưu tiên action_link, fallback theo title
+    let targetLink = notification.action_link;
+    if (!targetLink) {
+      const title = (notification.title || '').toLowerCase();
+      if (title.includes('thanh toán') || title.includes('nâng cấp')) {
+        targetLink = '/profile?tab=payment';
+      }
+    }
+
+    if (targetLink) {
       setIsOpen(false);
-      navigate(notification.action_link);
+      navigate(targetLink);
     }
   };
 

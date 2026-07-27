@@ -542,6 +542,26 @@
   color: #10b981;
 }
 
+.profile-card-icon.payment {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.profile-item-icon-box.payment {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.profile-badge.payment-amount {
+  background: #ede9fe;
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.profile-badge.cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 .profile-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

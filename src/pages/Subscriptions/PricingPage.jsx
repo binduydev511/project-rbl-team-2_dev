@@ -157,7 +157,8 @@ const PricingPage = () => {
             title: 'Nâng cấp thành công 🎉',
             content: `Chúc mừng bạn đã dùng điểm đổi thành công gói ${planName}. Cảm ơn bạn đã tin tưởng dịch vụ!`,
             type: 'system',
-            is_read: false
+            is_read: false,
+            action_link: '/profile?tab=payment'
           }]);
           
           toast.success(`Đổi gói thành công! Bạn đã được cấp gói ${planName}.`);
@@ -362,6 +363,16 @@ const PricingPage = () => {
                 plan: selectedPlan.name,
                 plan_expires_at: durationDays > 0 ? expiresAt.toISOString() : null
               }).eq('id', user.id);
+
+              // Tạo thông báo thanh toán thành công
+              await supabase.from('notifications').insert([{
+                user_id: user.id,
+                title: 'Thanh toán thành công 🎉',
+                content: `Chúc mừng bạn đã nâng cấp thành công lên gói ${selectedPlan.name}. Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ của chúng tôi!`,
+                type: 'success',
+                is_read: false,
+                action_link: '/profile?tab=payment'
+              }]);
             } catch (err) {
               console.error('Lỗi khi nâng cấp DB:', err);
             }

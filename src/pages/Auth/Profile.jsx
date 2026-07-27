@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
 import { useConfirm } from '../../utils/ConfirmContext';
@@ -21,7 +21,10 @@ import {
   EyeOff,
   CheckCircle2,
   Clock,
-  Sparkles
+  Sparkles,
+  CreditCard,
+  DollarSign,
+  XCircle
 } from 'lucide-react';
 import './Auth.css';
 
@@ -29,8 +32,18 @@ const Profile = () => {
   const confirm = useConfirm();
   const { user, profile, updateProfile, updatePassword } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   
-  const [activeTab, setActiveTab] = useState('personal'); // personal, cv, history
+  const [activeTab, setActiveTab] = useState('personal'); // personal, cv, history, payment
+
+  // Đọc query param ?tab= để chuyển tab tự động (VD: từ thông báo thanh toán)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab && ['personal', 'cv', 'history', 'payment'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   // Personal Info States
   const [fullName, setFullName] = useState('');
@@ -51,6 +64,7 @@ const Profile = () => {
   // Dynamic Data States
   const [cvs, setCvs] = useState([]);
   const [history, setHistory] = useState([]);
+  const [paymentHistory, setPaymentHistory] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
 
   useEffect(() => {
@@ -87,6 +101,17 @@ const Profile = () => {
         
       if (!historyError && historyData) {
         setHistory(historyData);
+      }
+
+      // Fetch payment/order history
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, user_id, plan_name, price, order_code, status, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (!ordersError && ordersData) {
+        setPaymentHistory(ordersData);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -590,6 +615,89 @@ const Profile = () => {
     </div>
   );
 
+  const getPaymentStatusBadge = (status) => {
+    switch (status) {
+      case 'paid':
+        return { label: 'Đã thanh toán', className: 'success', icon: <CheckCircle2 size={13} /> };
+      case 'pending':
+        return { label: 'Chờ thanh toán', className: 'pending', icon: <Clock size={13} /> };
+      case 'cancelled':
+        return { label: 'Đã hủy', className: 'cancelled', icon: <XCircle size={13} /> };
+      default:
+        return { label: status || 'Không xác định', className: 'pending', icon: <Clock size={13} /> };
+    }
+  };
+
+  const renderPaymentTab = () => (
+    <div className="profile-section-card animate-fade">
+      <div className="profile-card-header flex-between">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="profile-card-icon payment">
+            <CreditCard size={20} />
+          </div>
+          <div>
+            <h3>Lịch sử thanh toán</h3>
+            <p>Xem lại các giao dịch nâng cấp gói dịch vụ của bạn</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => navigate('/pricing')}
+          className="btn-profile-action" 
+        >
+          <Plus size={16} /> Nâng cấp gói
+        </button>
+      </div>
+
+      <div className="profile-data-list">
+        {loadingData ? (
+          <div className="profile-loading-box">
+            <Sparkles className="spinning-icon" size={24} />
+            <p>Đang tải lịch sử thanh toán...</p>
+          </div>
+        ) : paymentHistory.length > 0 ? (
+          paymentHistory.map(order => {
+            const statusInfo = getPaymentStatusBadge(order.status);
+            return (
+              <div key={order.id} className="profile-data-item">
+                <div className="profile-item-main">
+                  <div className="profile-item-icon-box payment">
+                    <DollarSign size={24} color="#8b5cf6" />
+                  </div>
+                  <div>
+                    <h4 className="profile-item-title">Gói {order.plan_name}</h4>
+                    <p className="profile-item-sub">
+                      Mã đơn: {order.order_code} • {new Date(order.created_at).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="profile-item-right">
+                  <span className="profile-badge payment-amount">
+                    <DollarSign size={13} />
+                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(order.price)}
+                  </span>
+                  <span className={`profile-badge ${statusInfo.className}`}>
+                    {statusInfo.icon}
+                    {statusInfo.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="profile-empty-box">
+            <CreditCard size={48} className="empty-icon" />
+            <h4>Chưa có lịch sử thanh toán</h4>
+            <p>Nâng cấp gói dịch vụ để mở khóa các tính năng cao cấp.</p>
+            <button onClick={() => navigate('/pricing')} className="btn-profile-action" style={{ marginTop: '0.75rem' }}>
+              <Sparkles size={16} /> Xem gói dịch vụ
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="profile-page-wrapper animate-fade">
       <div className="profile-main-container">
@@ -642,6 +750,14 @@ const Profile = () => {
                   <History size={18} />
                   <span>Lịch sử thực hành</span>
                 </button>
+
+                <button 
+                  className={`profile-nav-item ${activeTab === 'payment' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('payment')}
+                >
+                  <CreditCard size={18} />
+                  <span>Lịch sử thanh toán</span>
+                </button>
               </>
             )}
           </div>
@@ -651,6 +767,7 @@ const Profile = () => {
             {activeTab === 'personal' && renderPersonalInfoTab()}
             {activeTab === 'cv' && renderCVTab()}
             {activeTab === 'history' && renderHistoryTab()}
+            {activeTab === 'payment' && renderPaymentTab()}
           </div>
         </div>
 
