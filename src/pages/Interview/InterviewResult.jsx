@@ -675,7 +675,7 @@ export default function InterviewResult() {
       <div className="result-container">
         {/* ── Header ── */}
         <div className="result-header iv-animate-fade">
-          <button className="iv-btn iv-btn--ghost" onClick={() => navigate(-1)}>
+          <button className="iv-btn iv-btn--ghost" onClick={() => navigate('/interview')}>
             <ArrowLeft size={18} />
             Quay lại
           </button>
